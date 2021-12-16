@@ -6,7 +6,7 @@ using namespace std;
 #define N 100000000
 #define BlockSize 9307050
 double InvertedN = (1.0/N);
-#define ThreadCount 2
+#define ThreadCount 16
 DWORD OperationSumm = 0;
 
 typedef struct {
@@ -17,6 +17,8 @@ typedef struct {
 
 DWORD WINAPI Sync(LPVOID parametr){
     SyncStruct* ThreadBlock = (SyncStruct*) parametr;
+    ThreadBlock->counter = OperationSumm;
+    OperationSumm += BlockSize;
     double sum_operations = 0;
     double x;
     DWORD SizeProgression;
@@ -27,17 +29,14 @@ DWORD WINAPI Sync(LPVOID parametr){
             SizeProgression = N;
         for(DWORD i = ThreadBlock->counter; i < SizeProgression ; i++){
             x = ( i + 0.5) * InvertedN; 
-            sum_operations += (1/(1 + x*x));
+            sum_operations += (1.0/(1.0 + x*x));
         }
-        ThreadBlock->pi += sum_operations;
+        ThreadBlock->counter = OperationSumm;
         if(OperationSumm > N ){
+            ThreadBlock->pi += sum_operations;
             TerminateThread(ThreadBlock->Thread, 0);
         }
-        sum_operations = 0;
-        ThreadBlock->counter = OperationSumm;
         OperationSumm += BlockSize;
-        //cout << "opsum: " << OperationSumm << endl;
-        //SuspendThread(ThreadBlock->Thread);
     }
 }
 
@@ -58,8 +57,6 @@ int main()
     start_time = GetTickCount();
     
     for(int k = 0; k<ThreadCount; k++){
-        ThreadInformation[k].counter = OperationSumm;
-        OperationSumm += BlockSize;
         ResumeThread(Threads[k]);
         if(NULL == Threads[k]) cout << "Error Create!" << endl;
     }    
