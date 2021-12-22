@@ -6,8 +6,8 @@ using namespace std;
 #define N 100000000
 #define BlockSize 9307050
 double InvertedN = (1.0/N);
-#define ThreadCount 16
-DWORD OperationSumm = 0;
+#define ThreadCount 1
+long NumberBlockObrAll = 0;
 
 typedef struct {
     DWORD counter;
@@ -16,13 +16,14 @@ typedef struct {
 } SyncStruct;
 
 DWORD WINAPI Sync(LPVOID parametr){
+    int NumberBlockObrUnit;
     SyncStruct* ThreadBlock = (SyncStruct*) parametr;
-    ThreadBlock->counter = OperationSumm;
-    OperationSumm += BlockSize;
     double sum_operations = 0;
     double x;
     DWORD SizeProgression;
     while(1){
+        NumberBlockObrUnit = InterlockedIncrement(&NumberBlockObrAll)-1;
+        ThreadBlock->counter = NumberBlockObrUnit*BlockSize;
         if(ThreadBlock->counter + BlockSize < N) 
             SizeProgression = BlockSize + ThreadBlock->counter ;
         else 
@@ -31,12 +32,10 @@ DWORD WINAPI Sync(LPVOID parametr){
             x = ( i + 0.5) * InvertedN; 
             sum_operations += (1.0/(1.0 + x*x));
         }
-        ThreadBlock->counter = OperationSumm;
-        if(OperationSumm > N ){
+        if(ThreadBlock->counter > N ){
             ThreadBlock->pi += sum_operations;
             TerminateThread(ThreadBlock->Thread, 0);
         }
-        OperationSumm += BlockSize;
     }
 }
 
